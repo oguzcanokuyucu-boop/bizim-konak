@@ -61,7 +61,7 @@ function home(){
   return `<div class="topbar">
     <div class="brand">
       <div class="logoMark">☕</div>
-      <div><h1>${DB.settings.business}</h1><small>ÇAY EVİ</small></div>
+      <div><h1>${DB.settings.business}</h1><small>OKEY SALONU</small></div>
       <button class="logoMark cardIcon" aria-label="Oyun simgesi" onclick="toast('Bizim Konak')">🂡</button>
     </div>
     <div class="dateRow"><b>☀️ Günaydın, ${DB.settings.owner||'Oğuzcan'}</b><button class="dateButton" onclick="go('days')">📅 ${dateTR()}</button></div>
@@ -125,13 +125,20 @@ function saveDay(editing=false){
   writeDay(date,cash,pos,staff,expense); save(); toast(editing?'Gün güncellendi':'Gün kaydedildi'); go('home');
 }
 function editDay(date){ $('#app').innerHTML=dayForm(date,true); bindDayPreview(); window.scrollTo(0,0); }
+function deleteDay(date){
+  if(!confirm(`${date} tarihli gün kaydı silinsin mi?`)) return;
+  DB.tx=DB.tx.filter(x=>x.date!==date);
+  save();
+  toast('Gün kaydı silindi');
+  go('days');
+}
 
 function daysPage(){
   const dates=[...new Set(DB.tx.map(x=>x.date))].sort((a,b)=>b.localeCompare(a));
   return `<header class="headerGreen"><button onclick="go('home')">‹</button><h2>Günlük Kayıtlar</h2><span style="width:24px"></span></header>
-  <main class="page"><div class="subtleText">Düzenlemek istediğin güne dokun.</div>
+  <main class="page"><div class="subtleText">Düzenlemek için satıra dokun. Silmek için sağdaki butonu kullan.</div>
     <div class="sectionTitle">TÜM GÜNLER</div>
-    <div class="list">${dates.length?dates.map(date=>{const d=dayBreakdown(date);return `<button class="dayListRow" onclick="editDay('${date}')"><div><b>${dateTR(new Date(date+'T12:00:00'))}</b><small>Nakit ${fmt(d.cash)} · POS ${fmt(d.pos)} · Gider ${fmt(d.expense)}</small></div><span>${fmt(d.profit)} ›</span></button>`}).join(''):'<div class="empty">Henüz kayıt yok.</div>'}</div>
+    <div class="list">${dates.length?dates.map(date=>{const d=dayBreakdown(date);return `<div class="dayListRowWrap"><button class="dayListRow" onclick="editDay('${date}')"><div><b>${dateTR(new Date(date+'T12:00:00'))}</b><small>Nakit ${fmt(d.cash)} · POS ${fmt(d.pos)} · Gider ${fmt(d.expense)}</small></div><span>${fmt(d.profit)} ›</span></button><button class="dayDeleteBtn" onclick="deleteDay('${date}')">Sil</button></div>`}).join(''):'<div class="empty">Henüz kayıt yok.</div>'}</div>
   </main>${renderNav('')}`;
 }
 
@@ -181,7 +188,7 @@ function deleteRec(id){ const r=DB.receivables.find(x=>x.id===id); if(!r)return;
 function settings(){
   return `<header class="headerGreen"><button onclick="go('home')">‹</button><h2>Ayarlar</h2><span style="width:24px"></span></header>
   <main class="page">
-    <div class="card" style="text-align:center"><img src="icon-192.png" style="width:74px;border-radius:20px"><h2 style="font-family:Georgia,serif;color:#1f5a3a;margin-bottom:4px">${DB.settings.business}</h2><span class="pill">ÇAY EVİ</span></div>
+    <div class="card" style="text-align:center"><img src="icon-192.png" style="width:74px;border-radius:20px"><h2 style="font-family:Georgia,serif;color:#1f5a3a;margin-bottom:4px">${DB.settings.business}</h2><span class="pill">OKEY SALONU</span></div>
     <div class="sectionTitle">UYGULAMA</div><div class="list">
       <button class="settingsBtn" onclick="editBusiness()">İş Yeri Bilgileri <span>›</span></button>
       <button class="settingsBtn" onclick="exportCSV()">Verileri CSV Olarak Dışa Aktar <span>›</span></button>
