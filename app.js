@@ -44,7 +44,7 @@ function home(){
   <div class="card"><div class="statline"><span>Toplam Ciro</span><b class="pos">${fmt(mon.inc)}</b></div><div class="statline"><span>Toplam Gider</span><b class="neg">${fmt(mon.exp)}</b></div><div class="statline"><span>Net Kâr</span><b>${fmt(mon.profit)}</b></div></div>
   <div class="sectionTitle">KISA YOL</div>
   <div class="quick">
-   <button onclick="go('income')"><span class="ico">➕</span><span>Gelir Ekle</span></button>
+   <button onclick="go('day')"><span class="ico">📅</span><span>Gün Ekle</span></button>
    <button onclick="go('expense')"><span class="ico">➖</span><span>Gider Ekle</span></button>
    <button onclick="go('reports')"><span class="ico">📊</span><span>Raporlar</span></button>
    <button onclick="go('receivables')"><span class="ico">👥</span><span>Veresiye</span></button>
@@ -70,6 +70,47 @@ function form(kind){
   <button class="primary ${inc?'':'danger'}" onclick="addTx('${kind}')">Kaydet</button>
  </div></main>${renderNav(kind)}`
 }
+
+function dayForm(){
+ return `<header class="headerGreen"><button onclick="go('home')">‹</button><h2>Gün Ekle</h2><span style="width:24px"></span></header>
+ <main class="page"><div class="formCard">
+  <div class="field"><label>Tarih</label><input id="dayDate" type="date" value="${todayISO()}"></div>
+  <div class="field"><label>Nakit Satış</label><input id="dayCash" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00 TL"></div>
+  <div class="field"><label>POS Satış</label><input id="dayPos" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00 TL"></div>
+  <div class="field"><label>Personel</label><input id="dayStaff" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00 TL"></div>
+  <div class="field"><label>Diğer Giderler</label><input id="dayExpense" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00 TL"></div>
+  <div class="card" style="margin:4px 0 16px;box-shadow:none">
+   <div class="statline"><span>Günlük Ciro</span><b id="dayTurnover" class="pos">${fmt(0)}</b></div>
+   <div class="statline"><span>Toplam Gider</span><b id="dayTotalExpense" class="neg">${fmt(0)}</b></div>
+   <div class="statline"><span>Net Kazanç</span><b id="dayNet">${fmt(0)}</b></div>
+  </div>
+  <button class="primary" onclick="saveDay()">Günü Kaydet</button>
+ </div></main>${renderNav('')}`
+}
+function dayNumber(id){return Math.max(0,Number($(id)?.value||0))}
+function updateDayPreview(){
+ const turnover=dayNumber('#dayCash')+dayNumber('#dayPos');
+ const expense=dayNumber('#dayStaff')+dayNumber('#dayExpense');
+ if($('#dayTurnover'))$('#dayTurnover').textContent=fmt(turnover);
+ if($('#dayTotalExpense'))$('#dayTotalExpense').textContent=fmt(expense);
+ if($('#dayNet'))$('#dayNet').textContent=fmt(turnover-expense);
+}
+function bindDayPreview(){['#dayCash','#dayPos','#dayStaff','#dayExpense'].forEach(id=>$(id)?.addEventListener('input',updateDayPreview));updateDayPreview()}
+function saveDay(){
+ const date=$('#dayDate').value||todayISO();
+ const cash=dayNumber('#dayCash'), pos=dayNumber('#dayPos'), staff=dayNumber('#dayStaff'), expense=dayNumber('#dayExpense');
+ if(cash+pos+staff+expense<=0){toast('En az bir tutar gir');return}
+ const existing=DB.tx.filter(x=>x.source==='day'&&x.date===date);
+ if(existing.length&&!confirm('Bu tarih için Gün Ekle kaydı var. Eski kaydı değiştirilsin mi?'))return;
+ if(existing.length)DB.tx=DB.tx.filter(x=>!(x.source==='day'&&x.date===date));
+ const created=new Date().toISOString(), dayId=uid();
+ if(cash>0)DB.tx.push({id:uid(),dayId,source:'day',kind:'income',category:'Nakit Satış',amount:cash,payment:'cash',date,note:'Günlük kayıt',created});
+ if(pos>0)DB.tx.push({id:uid(),dayId,source:'day',kind:'income',category:'POS Satış',amount:pos,payment:'card',date,note:'Günlük kayıt',created});
+ if(staff>0)DB.tx.push({id:uid(),dayId,source:'day',kind:'expense',category:'Personel',amount:staff,payment:'cash',date,note:'Günlük kayıt',created});
+ if(expense>0)DB.tx.push({id:uid(),dayId,source:'day',kind:'expense',category:'Diğer Giderler',amount:expense,payment:'cash',date,note:'Günlük kayıt',created});
+ save();toast('Gün kaydedildi');go('home')
+}
+
 let payment='cash';
 function setPay(p){payment=p;$('#cashBtn').classList.toggle('active',p==='cash');$('#cardBtn').classList.toggle('active',p==='card')}
 function addTx(kind){
@@ -133,6 +174,6 @@ function exportCSV(){
 }
 function backupJSON(){download('bizim-konak-yedek.json',JSON.stringify(DB,null,2),'application/json');toast('Yedek hazırlandı')}
 function clearAll(){if(confirm('Tüm gelir, gider ve veresiye kayıtları silinsin mi?')){DB.tx=[];DB.receivables=[];save();go('settings')}}
-function go(page){payment='cash'; const app=$('#app'); if(page==='income'||page==='expense')app.innerHTML=form(page); else if(page==='reports')app.innerHTML=reports(); else if(page==='settings')app.innerHTML=settings(); else if(page==='receivables')app.innerHTML=receivables(); else app.innerHTML=home(); window.scrollTo(0,0)}
+function go(page){payment='cash'; const app=$('#app'); if(page==='day'){app.innerHTML=dayForm();bindDayPreview()} else if(page==='income'||page==='expense')app.innerHTML=form(page); else if(page==='reports')app.innerHTML=reports(); else if(page==='settings')app.innerHTML=settings(); else if(page==='receivables')app.innerHTML=receivables(); else app.innerHTML=home(); window.scrollTo(0,0)}
 go('home');
 if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
