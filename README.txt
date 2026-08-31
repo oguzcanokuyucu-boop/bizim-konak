@@ -30,3 +30,14 @@ Raporlar:
 - Nakit/POS dağılımı
 - Günlere göre kâr grafiği
 - Toplam satış, gider ve kâr marjı
+
+
+v5: Yatan POS kayıtları ve aylık POS mutabakatı eklendi. %5 komisyon toleransı uygulanır; günlük birebir eşleştirme yapılmaz. Gün silme ve Okey Salonu başlığı korunur.
+
+
+v6 - Gider Ekle:
+- Alt menüye Gider Ekle eklendi.
+- Kira, Firma Ödemesi, Elektrik, Su, İnternet, Muhasebe, Vergi, Mal Alımı, Bakım/Tamir ve Diğer kategorileri.
+- Ek giderler doğrudan toplam gider ve net kâr hesabına dahil edilir.
+- Ek giderler günlük satış kayıtlarından ayrı tutulur ve silinebilir.
+- Raporlar ekranında ek gider kategori dökümü gösterilir.
