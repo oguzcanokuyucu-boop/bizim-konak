@@ -41,3 +41,18 @@ v6 - Gider Ekle:
 - Ek giderler doğrudan toplam gider ve net kâr hesabına dahil edilir.
 - Ek giderler günlük satış kayıtlarından ayrı tutulur ve silinebilir.
 - Raporlar ekranında ek gider kategori dökümü gösterilir.
+
+
+v7 - Birikimli Kasa:
+- Ana sayfaya Kasada Kalan Nakit eklendi.
+- Kasa ay boyunca birikimli hesaplanır: Nakit satış - Personel - kasadan ödenen ek giderler.
+- Günlük tabloda her günün birikimli kasa tutarı görünür.
+- Gün Ekle ekranında o gün kasaya eklenecek net nakit önizlemesi vardır.
+- Gider Ekle ekranına Nereden Ödendi? (Nakit/Kasadan veya Banka) seçeneği eklendi.
+- Nakit ödenen ek giderler hem kârdan hem kasadan düşer; banka ödemeleri yalnız kârdan düşer.
+
+
+V8 Duzeltmeleri:
+- Gun silme artik secili tarihteki tum satis/personel/ek gider kayitlarini siler.
+- Onbellek zorla yenileme eklendi (v8 query + service worker v8).
+- Kasada Kalan Nakit karti v7'deki gibi ana sayfada kalir.

@@ -52,6 +52,21 @@ function monthTotals(key=monthKey()){
   const days=monthDays(key);
   return days.reduce((a,d)=>({cash:a.cash+d.cash,pos:a.pos+d.pos,expense:a.expense+d.expense,profit:a.profit+d.profit}),{cash:0,pos:0,expense:0,profit:0});
 }
+function cashBoxBalance(key=monthKey(), throughDate=null){
+  const rows=DB.tx.filter(x=>monthKey(x.date)===key && (!throughDate || x.date<=throughDate));
+  const cashSales=rows.filter(x=>x.kind==='income'&&x.payment==='cash').reduce((a,x)=>a+Number(x.amount||0),0);
+  const staffPaid=rows.filter(x=>x.kind==='expense'&&x.category==='Personel'&&x.source!=='extra-expense').reduce((a,x)=>a+Number(x.amount||0),0);
+  const extraCash=rows.filter(x=>x.kind==='expense'&&x.source==='extra-expense'&&x.payment==='cash').reduce((a,x)=>a+Number(x.amount||0),0);
+  return cashSales-staffPaid-extraCash;
+}
+function dayCashAdded(date){
+  const d=dayBreakdown(date);
+  const extraCash=DB.tx.filter(x=>x.date===date&&x.kind==='expense'&&x.source==='extra-expense'&&x.payment==='cash').reduce((a,x)=>a+Number(x.amount||0),0);
+  return d.cash-d.staff-extraCash;
+}
+function monthDaysWithCashBox(key=monthKey()){
+  return monthDays(key).map(d=>({...d,cashAdded:dayCashAdded(d.date),cashBox:cashBoxBalance(key,d.date)}));
+}
 function bankPosForMonth(key=monthKey()){
   return DB.bankPos.filter(x=>monthKey(x.date)===key).sort((a,b)=>b.date.localeCompare(a.date));
 }
@@ -84,7 +99,8 @@ function renderNav(active){
 
 function home(){
   const mon=monthTotals();
-  const days=monthDays();
+  const days=monthDaysWithCashBox();
+  const cashBox=cashBoxBalance();
   return `<div class="topbar">
     <div class="brand">
       <div class="logoMark">☕</div>
@@ -94,16 +110,17 @@ function home(){
     <div class="dateRow"><b>☀️ Günaydın, ${DB.settings.owner||'Oğuzcan'}</b><button class="dateButton" onclick="go('days')">📅 ${dateTR()}</button></div>
   </div>
   <main class="page">
-    <div class="cards twoMetrics">
+    <div class="cards threeMetrics">
       <div class="card metric cashMetric"><div class="label">TOPLAM NAKİT</div><div class="value">${fmt(mon.cash)}</div></div>
       <div class="card metric posMetric"><div class="label">TOPLAM POS</div><div class="value">${fmt(mon.pos)}</div></div>
+      <div class="card metric cashBoxMetric"><div class="label">KASADA KALAN NAKİT</div><div class="value">${fmt(cashBox)}</div><small>Nakit − personel − nakit ödenen ek giderler</small></div>
     </div>
 
     <div class="monthHeading"><div><span>AYLIK KAYITLAR</span><b>${currentMonthName()}</b></div><button onclick="go('days')">Tüm Günler ›</button></div>
     <div class="tableCard">
-      <div class="monthTable head"><span>Tarih</span><span>Nakit</span><span>POS</span><span>Gider</span><span>Kâr</span></div>
-      ${days.length?days.map(d=>`<button class="monthTable data" onclick="editDay('${d.date}')">
-        <span class="dayDate">${shortDateTR(d.date)}</span><span class="green">${fmt(d.cash)}</span><span class="blue">${fmt(d.pos)}</span><span class="red">${fmt(d.expense)}</span><span class="green">${fmt(d.profit)}</span>
+      <div class="monthTable head sixCols"><span>Tarih</span><span>Nakit</span><span>POS</span><span>Gider</span><span>Kâr</span><span>Kasa</span></div>
+      ${days.length?days.map(d=>`<button class="monthTable data sixCols" onclick="editDay('${d.date}')">
+        <span class="dayDate">${shortDateTR(d.date)}</span><span class="green">${fmt(d.cash)}</span><span class="blue">${fmt(d.pos)}</span><span class="red">${fmt(d.expense)}</span><span class="green">${fmt(d.profit)}</span><span class="cashBoxValue">${fmt(d.cashBox)}</span>
       </button>`).join(''):'<div class="empty">Bu ay henüz günlük kayıt yok. Alt menüden “Gün Ekle” ile başlayabilirsin.</div>'}
     </div>
   </main>${renderNav('home')}`;
@@ -123,6 +140,7 @@ function dayForm(date=todayISO(), editing=false){
       <div class="miniSummary"><span>TOPLAM GİDER</span><b id="dayTotalExpense" class="red">${fmt(0)}</b></div>
     </div>
     <div class="netSummary"><span>NET KÂR</span><b id="dayNet">${fmt(0)}</b></div>
+    <div class="cashPreview"><span>BU GÜN KASAYA EKLENECEK</span><b id="dayCashAdded">${fmt(0)}</b><small>Nakit satış − personel</small></div>
     ${editing?'<div class="editNote">Bu kayıt kaydedildiğinde seçili günün gelir ve giderleri 4 kalem halinde güncellenir.</div>':''}
     <button class="primary" onclick="saveDay(${editing?'true':'false'})">${editing?'Değişiklikleri Kaydet':'Günü Kaydet'}</button>
   </div></main>${renderNav('day')}`;
@@ -134,6 +152,7 @@ function updateDayPreview(){
   if($('#dayTurnover')) $('#dayTurnover').textContent=fmt(turnover);
   if($('#dayTotalExpense')) $('#dayTotalExpense').textContent=fmt(expense);
   if($('#dayNet')) $('#dayNet').textContent=fmt(turnover-expense);
+  if($('#dayCashAdded')) $('#dayCashAdded').textContent=fmt(dayNumber('#dayCash')-dayNumber('#dayStaff'));
 }
 function bindDayPreview(){ ['#dayCash','#dayPos','#dayStaff','#dayExpense'].forEach(id=>$(id)?.addEventListener('input',updateDayPreview)); updateDayPreview(); }
 function writeDay(date,cash,pos,staff,expense){
@@ -153,19 +172,21 @@ function saveDay(editing=false){
 }
 function editDay(date){ $('#app').innerHTML=dayForm(date,true); bindDayPreview(); window.scrollTo(0,0); }
 function deleteDay(date){
-  if(!confirm(`${date} tarihli gün kaydı silinsin mi?`)) return;
-  DB.tx=DB.tx.filter(x=>!(x.date===date&&x.source!=='extra-expense'));
+  const count=DB.tx.filter(x=>x.date===date).length;
+  if(!count){ toast('Bu güne ait kayıt bulunamadı'); return; }
+  if(!confirm(`${date} tarihindeki TÜM kayıtlar silinsin mi?\n\nSatış, personel ve o güne eklenen diğer giderler de silinecek.`)) return;
+  DB.tx=DB.tx.filter(x=>x.date!==date);
   save();
-  toast('Günlük satış kaydı silindi');
+  toast('Gün tamamen silindi');
   go('days');
 }
 
 function daysPage(){
   const dates=[...new Set(DB.tx.map(x=>x.date))].sort((a,b)=>b.localeCompare(a));
   return `<header class="headerGreen"><button onclick="go('home')">‹</button><h2>Günlük Kayıtlar</h2><span style="width:24px"></span></header>
-  <main class="page"><div class="subtleText">Düzenlemek için satıra dokun. Silmek için sağdaki butonu kullan.</div>
+  <main class="page"><div class="subtleText">Düzenlemek için satıra dokun. Sil butonu o tarihteki tüm satış ve gider kayıtlarını kaldırır.</div>
     <div class="sectionTitle">TÜM GÜNLER</div>
-    <div class="list">${dates.length?dates.map(date=>{const d=dayBreakdown(date);return `<div class="dayListRowWrap"><button class="dayListRow" onclick="editDay('${date}')"><div><b>${dateTR(new Date(date+'T12:00:00'))}</b><small>Nakit ${fmt(d.cash)} · POS ${fmt(d.pos)} · Gider ${fmt(d.expense)}</small></div><span>${fmt(d.profit)} ›</span></button><button class="dayDeleteBtn" onclick="deleteDay('${date}')">Sil</button></div>`}).join(''):'<div class="empty">Henüz kayıt yok.</div>'}</div>
+    <div class="list">${dates.length?dates.map(date=>{const d=dayBreakdown(date);return `<div class="dayListRowWrap"><button class="dayListRow" onclick="editDay('${date}')"><div><b>${dateTR(new Date(date+'T12:00:00'))}</b><small>Nakit ${fmt(d.cash)} · POS ${fmt(d.pos)} · Gider ${fmt(d.expense)} · Kasa ${fmt(cashBoxBalance(monthKey(date),date))}</small></div><span>${fmt(d.profit)} ›</span></button><button class="dayDeleteBtn" onclick="deleteDay('${date}')">Sil</button></div>`}).join(''):'<div class="empty">Henüz kayıt yok.</div>'}</div>
   </main>${renderNav('')}`;
 }
 
@@ -189,22 +210,24 @@ function expensePage(){
       <div class="field"><label>Tarih</label><input id="expenseDate" type="date" value="${todayISO()}"></div>
       <div class="field"><label>Gider Türü</label><select id="expenseCategory"><option>Kira</option><option>Firma Ödemesi</option><option>Elektrik</option><option>Su</option><option>İnternet</option><option>Muhasebe</option><option>Vergi</option><option>Mal Alımı</option><option>Bakım / Tamir</option><option>Diğer</option></select></div>
       <div class="field"><label>Tutar</label><input id="expenseAmount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00 TL"></div>
+      <div class="field"><label>Nereden Ödendi?</label><select id="expensePayment"><option value="cash">Nakit / Kasadan</option><option value="bank">Banka</option></select></div>
       <div class="field"><label>Açıklama (isteğe bağlı)</label><input id="expenseNote" type="text" placeholder="Örn. Ağustos kira ödemesi"></div>
-      <div class="expenseInfo">Buradan eklediğin gider günlük satış kaydından ayrıdır ve doğrudan kâr hesabından düşer.</div>
+      <div class="expenseInfo">Her gider kârdan düşer. “Nakit / Kasadan” seçersen aynı zamanda Kasada Kalan Nakit tutarından da düşer. Banka seçersen kasa etkilenmez.</div>
       <button class="primary expensePrimary" onclick="saveExtraExpense()">Gideri Kaydet</button>
     </div>
     <div class="expenseMonthSummary"><span>BU AY EKLENEN EK GİDER</span><b>${fmt(total)}</b></div>
     <div class="sectionTitle">BU AYIN GİDERLERİ</div>
-    <div class="list">${rows.length?rows.map(x=>`<div class="expenseRow"><div><b>${x.category}</b><small>${shortDateTR(x.date)}${x.note?` · ${x.note}`:''}</small></div><strong>${fmt(x.amount)}</strong><button class="expenseDelete" onclick="deleteExtraExpense('${x.id}')">Sil</button></div>`).join(''):'<div class="empty">Bu ay ayrıca eklenmiş gider yok.</div>'}</div>
+    <div class="list">${rows.length?rows.map(x=>`<div class="expenseRow"><div><b>${x.category}</b><small>${shortDateTR(x.date)} · ${x.payment==='cash'?'Nakit':'Banka'}${x.note?` · ${x.note}`:''}</small></div><strong>${fmt(x.amount)}</strong><button class="expenseDelete" onclick="deleteExtraExpense('${x.id}')">Sil</button></div>`).join(''):'<div class="empty">Bu ay ayrıca eklenmiş gider yok.</div>'}</div>
   </main>${renderNav('expense')}`;
 }
 function saveExtraExpense(){
   const date=$('#expenseDate').value||todayISO();
   const category=$('#expenseCategory').value||'Diğer';
   const amount=Math.max(0,Number($('#expenseAmount').value||0));
+  const payment=$('#expensePayment').value||'bank';
   const note=$('#expenseNote').value.trim();
   if(amount<=0){ toast('Gider tutarını gir'); return; }
-  DB.tx.push({id:uid(),source:'extra-expense',kind:'expense',category,amount,payment:'other',date,note,created:new Date().toISOString()});
+  DB.tx.push({id:uid(),source:'extra-expense',kind:'expense',category,amount,payment,date,note,created:new Date().toISOString()});
   save(); toast('Gider kaydedildi ve kârdan düşüldü'); go('expense');
 }
 function deleteExtraExpense(id){
@@ -225,9 +248,10 @@ function reports(){
   <main class="page reportPage">
     <div class="periodTabs"><button>Günlük</button><button class="active">Aylık</button><button>Yıllık</button></div>
     <div class="reportMonth">${currentMonthName()}</div>
-    <div class="reportCards">
+    <div class="reportCards fourReportCards">
       <div class="reportMetric"><span>TOPLAM NAKİT</span><b class="green">${fmt(m.cash)}</b></div>
       <div class="reportMetric"><span>TOPLAM POS</span><b class="blue">${fmt(m.pos)}</b></div>
+      <div class="reportMetric"><span>KASADA KALAN</span><b class="cashBoxValue">${fmt(cashBoxBalance())}</b></div>
       <div class="reportMetric"><span>TOPLAM KÂR</span><b class="green">${fmt(m.profit)}</b></div>
     </div>
     <div class="card reportBlock posQuickBlock">
@@ -242,7 +266,7 @@ function reports(){
       ${days.length?`<div class="profitChart">${days.map(d=>`<div class="profitCol"><div class="profitBar" style="height:${Math.max(4,(Math.max(0,d.profit)/maxProfit)*100)}%"></div><span>${d.date.slice(8)}</span></div>`).join('')}</div>`:'<div class="empty">Grafik için günlük kayıt gerekiyor.</div>'}
     </div>
     <div class="card reportBlock"><div class="reportTitleRow"><div><h3>Ek Giderler</h3><small>Kira, firma, fatura ve diğer giderler.</small></div><button class="smallPrimary expenseMiniButton" onclick="go('expense')">Ekle +</button></div>${expenseCategoryTotals().length?expenseCategoryTotals().map(([name,amount])=>`<div class="statline"><span>${name}</span><b class="red">${fmt(amount)}</b></div>`).join(''):'<div class="empty">Bu ay ek gider yok.</div>'}</div>
-    <div class="card reportBlock"><div class="statline"><span>Toplam Satış</span><b>${fmt(turnover)}</b></div><div class="statline"><span>Toplam Gider</span><b class="red">${fmt(m.expense)}</b></div><div class="statline"><span>Ek Giderler</span><b class="red">${fmt(extraExpenseTotal())}</b></div><div class="statline"><span>Net Kâr</span><b class="${m.profit>=0?'green':'red'}">${fmt(m.profit)}</b></div><div class="statline"><span>Kâr Marjı</span><b>%${turnover?((m.profit/turnover)*100).toFixed(1):'0.0'}</b></div></div>
+    <div class="card reportBlock"><div class="statline"><span>Toplam Satış</span><b>${fmt(turnover)}</b></div><div class="statline"><span>Toplam Gider</span><b class="red">${fmt(m.expense)}</b></div><div class="statline"><span>Ek Giderler</span><b class="red">${fmt(extraExpenseTotal())}</b></div><div class="statline"><span>Kasada Kalan Nakit</span><b class="cashBoxValue">${fmt(cashBoxBalance())}</b></div><div class="statline"><span>Net Kâr</span><b class="${m.profit>=0?'green':'red'}">${fmt(m.profit)}</b></div><div class="statline"><span>Kâr Marjı</span><b>%${turnover?((m.profit/turnover)*100).toFixed(1):'0.0'}</b></div></div>
   </main>${renderNav('reports')}`;
 }
 
@@ -321,7 +345,7 @@ function settings(){
 function editBusiness(){ let b=prompt('İşletme adı',DB.settings.business); if(b){DB.settings.business=b;let o=prompt('Karşılama adı',DB.settings.owner||'');if(o!==null)DB.settings.owner=o;save();go('settings');} }
 function download(name,text,type='text/plain'){ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove(); }
 function exportCSV(){
-  const txRows=DB.tx.map(x=>[x.date,x.kind==='income'?'Gelir':'Gider',x.category,x.amount,x.payment==='cash'?'Nakit':x.payment==='card'?'POS':'Diğer',x.note||'']);
+  const txRows=DB.tx.map(x=>[x.date,x.kind==='income'?'Gelir':'Gider',x.category,x.amount,x.payment==='cash'?'Nakit':x.payment==='card'?'POS':x.payment==='bank'?'Banka':'Diğer',x.note||'']);
   const bankRows=DB.bankPos.map(x=>[x.date,'Banka','Yatan POS',x.amount,'Banka',x.note||'']);
   const rows=[['Tarih','Tür','Kategori','Tutar','Ödeme','Açıklama'],...txRows,...bankRows].sort((a,b)=>a[0]==='Tarih'?-1:b[0]==='Tarih'?1:String(b[0]).localeCompare(String(a[0])));
   const csv=rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(';')).join('\n');
@@ -345,4 +369,4 @@ function go(page){
 }
 
 go('home');
-if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
+if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=8').then(reg=>reg.update()).catch(()=>{}));
