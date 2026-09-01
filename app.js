@@ -110,10 +110,16 @@ function home(){
     <div class="dateRow"><b>☀️ Günaydın, ${DB.settings.owner||'Oğuzcan'}</b><button class="dateButton" onclick="go('days')">📅 ${dateTR()}</button></div>
   </div>
   <main class="page">
-    <div class="cards threeMetrics">
-      <div class="card metric cashMetric"><div class="label">TOPLAM NAKİT</div><div class="value">${fmt(mon.cash)}</div></div>
-      <div class="card metric posMetric"><div class="label">TOPLAM POS</div><div class="value">${fmt(mon.pos)}</div></div>
-      <div class="card metric cashBoxMetric"><div class="label">KASADA KALAN NAKİT</div><div class="value">${fmt(cashBox)}</div><small>Nakit − personel − nakit ödenen ek giderler</small></div>
+    <div class="homeSummary">
+      <div class="card metric profitHero"><div class="label">TOPLAM KAZANÇ</div><div class="value">${fmt(mon.profit)}</div><small>Toplam ciro − tüm giderler</small></div>
+      <div class="cards cashPosRow">
+        <div class="card metric cashBoxMetric"><div class="label">KASA NAKİT</div><div class="value">${fmt(cashBox)}</div><small>Birikimli kasa nakdi</small></div>
+        <div class="card metric posMetric"><div class="label">KASA POS</div><div class="value">${fmt(mon.pos)}</div><small>Ay boyunca biriken POS</small></div>
+      </div>
+      <div class="cards totalsRow">
+        <div class="card metric expenseMetric"><div class="label">GİDERLER</div><div class="value">${fmt(mon.expense)}</div><small>Personel + günlük + ek giderler</small></div>
+        <div class="card metric turnoverMetric"><div class="label">TOPLAM CİRO</div><div class="value">${fmt(mon.cash+mon.pos)}</div><small>Nakit + POS satışları</small></div>
+      </div>
     </div>
 
     <div class="monthHeading"><div><span>AYLIK KAYITLAR</span><b>${currentMonthName()}</b></div><button onclick="go('days')">Tüm Günler ›</button></div>

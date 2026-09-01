@@ -56,3 +56,6 @@ V8 Duzeltmeleri:
 - Gun silme artik secili tarihteki tum satis/personel/ek gider kayitlarini siler.
 - Onbellek zorla yenileme eklendi (v8 query + service worker v8).
 - Kasada Kalan Nakit karti v7'deki gibi ana sayfada kalir.
+
+
+v9: Ana sayfa özet kartları yeniden sıralandı: Toplam Kazanç, Kasa Nakit/Kasa POS, Giderler/Toplam Ciro.

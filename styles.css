@@ -31,3 +31,7 @@
 .cashPreview{margin-top:10px;border:1px solid #ead8b8;border-radius:14px;padding:14px;background:#fff8eb;text-align:center}.cashPreview span{display:block;font-size:10px;font-weight:850;color:#7c6b55;margin-bottom:7px}.cashPreview b{font-size:22px;color:#9a611a}.cashPreview small{display:block;font-size:9px;color:#8b7a64;margin-top:5px}
 .fourReportCards{grid-template-columns:repeat(4,1fr)}
 @media (max-width:560px){.threeMetrics{grid-template-columns:1fr 1fr}.cashBoxMetric{grid-column:1/-1}.monthTable.sixCols{grid-template-columns:1.05fr repeat(5,.88fr);font-size:8px}.fourReportCards{grid-template-columns:1fr 1fr}.fourReportCards .reportMetric:last-child{grid-column:auto}}
+
+/* v9 ana sayfa özet düzeni */
+.homeSummary{display:grid;gap:12px}.profitHero{background:#f1f8f2;border-color:#bfd9c5;text-align:left}.profitHero .label{color:#176b3e}.profitHero .value{font-size:34px;color:#176b3e}.profitHero small,.expenseMetric small,.turnoverMetric small,.posMetric small{display:block;color:#7b837e;font-size:9px;margin-top:7px;line-height:1.3}.cashPosRow,.totalsRow{grid-template-columns:1fr 1fr}.expenseMetric{background:#fff6f3;border-color:#ecd3cb}.expenseMetric .label,.expenseMetric .value{color:var(--red)}.turnoverMetric{background:#f8f6ff;border-color:#ded8ef}.turnoverMetric .label,.turnoverMetric .value{color:#6e4ba5}.cashBoxMetric .value{color:#9a611a}
+@media (max-width:360px){.cashPosRow,.totalsRow{grid-template-columns:1fr}}
